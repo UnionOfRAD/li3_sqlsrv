@@ -24,7 +24,7 @@ class SqlSrv extends \lithium\data\source\Database {
 		'entity' => 'lithium\data\entity\Record',
 		'set' => 'lithium\data\collection\RecordSet',
 		'relationship' => 'lithium\data\model\Relationship',
-		'result' => 'li3_sqlsrv\data\source\sql_srv\Result'
+		'result' => 'li3_sqlsrv\extensions\adapter\data\source\database\sql_srv\Result'
 	);
 
 	/**
