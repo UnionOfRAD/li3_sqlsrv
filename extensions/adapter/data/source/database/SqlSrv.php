@@ -6,7 +6,7 @@
  * @license       http://opensource.org/licenses/bsd-license.php The BSD License
  */
 
-namespace li3_sqlsrv\data\source;
+namespace li3_sqlsrv\extensions\adapter\data\source\database;
 
 use lithium\data\model\QueryException;
 

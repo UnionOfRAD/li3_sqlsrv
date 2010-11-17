@@ -6,7 +6,7 @@
  * @license       http://opensource.org/licenses/bsd-license.php The BSD License
  */
 
-namespace li3_sqlsrv\data\source\sql_srv;
+namespace li3_sqlsrv\extensions\adapter\data\source\database\sql_srv;
 
 class Result extends \lithium\data\source\database\Result {
 
