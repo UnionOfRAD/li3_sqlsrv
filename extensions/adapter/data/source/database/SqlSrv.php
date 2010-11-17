@@ -141,9 +141,9 @@ class SqlSrv extends \lithium\data\source\Database {
 			return extension_loaded('sqlsrv');
 		}
 		$features = array(
-			'arrays' => false,
-			'transactions' => false,
-			'booleans' => true,
+			'arrays'        => false,
+			'transactions'  => false,
+			'booleans'      => true,
 			'relationships' => true,
 		);
 		return isset($features[$feature]) ? $features[$feature] : null;
@@ -163,27 +163,20 @@ class SqlSrv extends \lithium\data\source\Database {
 		if (!$config['database']) {
 			return false;
 		}
-		$options['Database'] = $config['database'];
-
-		if (isset($config['replica'])) {
-			$options['Failover_partner'] = $config['replica'];
+		$mapping = array(
+			'database'   => 'Database',
+			'replica'    => 'Failover_partner',
+			'password'   => 'PWD',
+			'login'      => 'UID',
+			'persistent' => 'ConnectionPooling',
+			'encoding'   => 'CharacterSet',
+			'timeout'    => 'LoginTimeout'
+		);
+		foreach ($mapping as $from => $to) {
+			if (isset($config[$from])) {
+				$options[$to] = $config[$from];
+			}
 		}
-		if (isset($config['password'])) {
-			$options['PWD'] = $config['password'];
-		}
-		if (isset($config['username'])) {
-			$options['UID'] = $config['username'];
-		}
-		if (isset($config['persistent'])) {
-			$options['ConnectionPooling'] = $config['persistent'];
-		}
-		if (isset($config['encoding'])) {
-			$options['CharacterSet'] = $config['encoding'];
-		}
-		if (isset($config['timeout'])) {
-			$options['LoginTimeout'] = $config['timeout'];
-		}
-
 		if (!$this->connection = sqlsrv_connect($config['host'], $options)) {
 			return false;
 		}
@@ -357,8 +350,6 @@ class SqlSrv extends \lithium\data\source\Database {
 	 * @return resource Returns the result resource handle if the query is successful.
 	 */
 	protected function _execute($sql, array $options = array()) {
-		$options += $defaults;
-
 		return $this->_filter(__METHOD__, compact('sql', 'options'), function($self, $params) {
 			$sql = $params['sql'];
 			$options = $params['options'];
