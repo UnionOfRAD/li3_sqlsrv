@@ -287,25 +287,25 @@ class SqlSrv extends \lithium\data\source\Database {
 	 * @param object $context
 	 * @return array
 	 */
-	public function schema($query, $resource = null, $context = null) {
+	public function schema($query, $result = null, $context = null) {
 		if (is_object($query)) {
-			return parent::schema($query, $resource, $context);
+			return parent::schema($query, $result, $context);
 		}
-		$result = array();
-		$count = sqlsrv_num_fields($resource);
+		$fields = array();
+		$count = sqlsrv_num_fields($result->resource());
 
-		foreach (sqlsrv_field_metadata($resource) as $name => $value) {
+		foreach (sqlsrv_field_metadata($result->resource()) as $name => $value) {
 			if ($name === 'Name') {
-				$result[] = $value;
+				$fields[] = $value;
 			}
 		}
-		return $result;
+		return $fields;
 	}
-	
+
 	public function encoding($encoding = null) {
 		return true;
 	}
-	
+
 	/**
 	 * Retrieves database error message and error code.
 	 *
