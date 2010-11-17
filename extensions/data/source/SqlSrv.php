@@ -303,10 +303,12 @@ class SqlSrv extends \lithium\data\source\Database {
 			return parent::schema($query, $resource, $context);
 		}
 		$result = array();
-
 		$count = sqlsrv_num_fields($resource);
+
 		foreach (sqlsrv_field_metadata($resource) as $name => $value) {
-			$result[] = $name;
+			if ($name === 'Name') {
+				$result[] = $value;
+			}
 		}
 		return $result;
 	}
