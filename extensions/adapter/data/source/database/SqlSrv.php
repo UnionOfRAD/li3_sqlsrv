@@ -204,13 +204,10 @@ class SqlSrv extends \lithium\data\source\Database {
 	 * @filter This method can be filtered.
 	 */
 	public function entities($model = null) {
-		$_config = $this->_config;
-		$params = compact('model');
+		return $this->_filter(__METHOD__, compact('model'), function($self, $params) {
+			$query = "SELECT TABLE_NAME FROM [INFORMATION_SCHEMA].[TABLES]";
 
-		return $this->_filter(__METHOD__, $params, function($self, $params) use ($_config) {
-			$name = $self->name($_config['database']);
-
-			if (!$result = $self->invokeMethod('_execute', array("SELECT TABLE_NAME FROM [INFORMATION_SCHEMA].[TABLES]"))) {
+			if (!$result = $self->invokeMethod('_execute', array($query))) {
 				return null;
 			}
 			$entities = array();
