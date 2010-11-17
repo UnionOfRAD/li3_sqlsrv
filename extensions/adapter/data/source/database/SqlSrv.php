@@ -164,16 +164,15 @@ class SqlSrv extends \lithium\data\source\Database {
 			return false;
 		}
 		$options['Database'] = $config['database'];
-		$options['Encrypted'] = $config['encrypted'];
 
 		if (isset($config['replica'])) {
 			$options['Failover_partner'] = $config['replica'];
 		}
 		if (isset($config['password'])) {
-			$options['PWD'] = $config['PWD'];
+			$options['PWD'] = $config['password'];
 		}
-		if (isset($config['UID'])) {
-			$options['UID'] = $config['UID'];
+		if (isset($config['username'])) {
+			$options['UID'] = $config['username'];
 		}
 		if (isset($config['persistent'])) {
 			$options['ConnectionPooling'] = $config['persistent'];
@@ -312,7 +311,11 @@ class SqlSrv extends \lithium\data\source\Database {
 		}
 		return $result;
 	}
-
+	
+	public function encoding($encoding = null) {
+		return true;
+	}
+	
 	/**
 	 * Retrieves database error message and error code.
 	 *
