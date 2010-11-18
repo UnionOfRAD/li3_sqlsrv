@@ -11,11 +11,11 @@ namespace li3_sqlsrv\extensions\adapter\data\source\database\sql_srv;
 class Result extends \lithium\data\source\database\Result {
 
 	protected function _next() {
-		return sqlsrv_next_result($this->_resource);
+		return sqlsrv_fetch_array($this->_resource, SQLSRV_FETCH_ASSOC);
 	}
 
 	protected function _close() {
-		if ($this->_resource) {
+		if (is_resource($this->_resource)) {
 			sqlsrv_free_stmt($this->_resource);
 		}
 	}

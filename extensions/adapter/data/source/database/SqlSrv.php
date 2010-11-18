@@ -53,18 +53,18 @@ class SqlSrv extends \lithium\data\source\Database {
 	 * @var array
 	 */
 	protected $_strings = array(
-		'read'   => "SELECT {:limit} {:fields} From {:table}
+		'read'   => "SELECT {:limit} {:fields} From {:source}
 				{:joins} {:conditions} {:group} {:order} {:comment}",
 		'paged'  => "
 			SELECT * From (
 				SELECT {:fields}, ROW_NUMBER() OVER({:order}) AS [__LI3_ROW_NUMBER__]
-				From {:table} {:joins} {:conditions} {:group}
+				From {:source} {:joins} {:conditions} {:group}
 			) a {:limit} {:comment}",
-		'create' => "INSERT INTO {:table} ({:fields}) VALUES ({:values}) {:comment}",
-		'update' => "UPDATE {:table} SET {:fields} {:conditions} {:comment}",
-		'delete' => "DELETE {:flags} From {:table} {:aliases} {:conditions} {:comment}",
-		'schema' => "CREATE TABLE {:table} (\n{:columns}\n) {:indexes} {:comment}",
-		'join'   => "{:type} JOIN {:table} {:constraint}"
+		'create' => "INSERT INTO {:source} ({:fields}) VALUES ({:values}) {:comment}",
+		'update' => "UPDATE {:source} SET {:data} {:conditions} {:comment}",
+		'delete' => "DELETE {:flags} From {:source} {:aliases} {:conditions} {:comment}",
+		'schema' => "CREATE TABLE {:source} (\n{:columns}\n) {:indexes} {:comment}",
+		'join'   => "{:type} JOIN {:source} {:constraint}"
 	);
 
 
@@ -213,7 +213,7 @@ class SqlSrv extends \lithium\data\source\Database {
 			$entities = array();
 
 			while ($data = $result->next()) {
-				list($entities[]) = $data;
+				$entities[] = $data['TABLE_NAME'];
 			}
 			return $entities;
 		});
@@ -245,22 +245,30 @@ class SqlSrv extends \lithium\data\source\Database {
 				. "NUMERIC_SCALE as Size FROM INFORMATION_SCHEMA.COLUMNS "
 				. "WHERE TABLE_NAME = '{$name}'";
 
-			$columns = $self->read($sql, array('return' => 'array'));
+			if (!$columns = $self->invokeMethod('_execute', array($sql))) {
+				return null;
+			}
 			$fields = array();
 
-			foreach ($columns as $column) {
-				$match = $self->invokeMethod('_column', array($column['type']));
-
-				$fields[$column['field']] = $match + array(
-					'null'     => ($column['null'] == 'YES' ? true : false),
-					'default'  => $column['default'],
+			while ($column = $columns->next()) {
+				$fields[$column['Field']] = array(
+					'type'     => $column['Type'],
+					'length'   => $column['Length'],
+					'null'     => ($column['Null'] == 'YES' ? true : false),
+					'default'  => $column['Default'],
+					'key'      => ($column['Key'] == 1 ? 'primary' : null)
 				);
-				if ($fields[$column['Field']]['Length'] === -1) {
-					$fields[$column['Field']]['Length'] = 'max';
-				}
 			}
 			return $fields;
 		});
+	}
+
+	public function create($query, array $options = array()) {
+		if (is_object($query)) {
+			$table = $query->source();
+			$this->_execute("Set IDENTITY_INSERT [dbo].[{$table}] On");
+		}
+		return parent::create($query, $options);
 	}
 
 	/**
@@ -302,6 +310,20 @@ class SqlSrv extends \lithium\data\source\Database {
 		return $fields;
 	}
 
+	public function data($data, $context) {
+		if ($context->type() != "update" || !($entity =& $context->entity())) {
+			return $data;
+		}
+		$data = array();
+
+		foreach ($entity->export($this) as $name => $value) {
+			$name = $this->name($name);
+			$value = $this->value($value);
+			$data[] = "{$name} = {$value}";
+		}
+		return join(", ", $data);
+	}
+
 	public function encoding($encoding = null) {
 		return true;
 	}
@@ -318,6 +340,23 @@ class SqlSrv extends \lithium\data\source\Database {
 		return null;
 	}
 
+	/**
+	 * Returns a TOP clause (usually) from the given limit and the offset of the context object.
+	 *
+	 * @param integer $limit A number of records to which the query is limited to returning.
+	 * @param object $context The `lithium\data\model\Query` object
+	 * @return string
+	 */
+	public function limit($limit, $context) {
+		if (!$limit) {
+			return;
+		}
+		if ($offset = $context->offset() ?: '') {
+			// @todo HERE BE DRAGONS
+			$offset .= ', ';
+		}
+		return "TOP {$limit}";
+	}
 
 	public function alias($alias, $context) {
 		if ($context->type() == 'update' || $context->type() == 'delete') {
@@ -380,35 +419,6 @@ class SqlSrv extends \lithium\data\source\Database {
 			return $id;
 		}
 	}
-
-	/**
-	 * Get a result.
-	 *
-	 * @param string $type
-	 * @param object $resource
-	 * @param unknown_type $context
-	 * @return array|null
-	 */
-	public function result($type, $resource, $context) {
-		if (!is_resource($resource)) {
-			return null;
-		}
-
-		switch ($type) {
-			case 'next':
-				$result = sqlsrv_fetch_array($resource, SQLSRV_FETCH_ASSOC);
-			break;
-			case 'close':
-				sqlsrv_free_stmt($resource);
-				$result = null;
-			break;
-			default:
-				$result = parent::result($type, $resource, $context);
-			break;
-		}
-		return $result;
-	}
-
 
 	/**
 	 * Converts database-layer column types to basic types.
