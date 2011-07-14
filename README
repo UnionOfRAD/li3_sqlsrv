@@ -1,0 +1,5 @@
+Modified version of the li3_sqlsrv library from (https://github.com/jperras/li3_sqlsrv),
+which allows for transparent usage of the mssql driver where the sqlsrv driver is not available.
+
+Currently, the sqlsrv driver provided by Microsoft is Windows only.  mssql works on both but does not fully support
+the most recent version of SQL Server.  Ideally, I'll add a further failover step using ODBTP or ODBC at some point.
