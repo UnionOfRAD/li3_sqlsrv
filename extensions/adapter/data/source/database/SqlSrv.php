@@ -24,7 +24,6 @@ class SqlSrv extends \lithium\data\source\Database {
 		'entity' => 'lithium\data\entity\Record',
 		'set' => 'lithium\data\collection\RecordSet',
 		'relationship' => 'lithium\data\model\Relationship',
-		//'result' => set by the _set_driver() call		
 	);
 
 	/**
@@ -83,7 +82,13 @@ class SqlSrv extends \lithium\data\source\Database {
 	 */
 	protected $_useAlias = true;
 
-    public $driver = '';
+    /**
+	 * The available SQL Server driver to use
+	 *
+	 * @var string
+	 */
+
+    protected $driver = 'sqlsrv';
 
 	/**
 	 * Constructs the SQL Server adapter and sets the default port to 1433.
@@ -115,7 +120,7 @@ class SqlSrv extends \lithium\data\source\Database {
 	 * list of active connections.
 	 * @return The adapter instance.
 	 */
-	public function __construct(array $config = array()) {	    	    
+	public function __construct(array $config = array()) {
 		$defaults = array(
 			'APP' => 'app',
 			'host' => '(local), 1433',
@@ -126,15 +131,16 @@ class SqlSrv extends \lithium\data\source\Database {
 			'Encrypted' => false,
 			'replica' => null,
 			'timeout' => null,
+			'driver' => null
 		);
-		
-		if(isset($config['driver'])) $this->_set_driver($config['driver']);
-		else $this->_set_driver();
-		
-		parent::__construct($config + $defaults);
+
+		$config = $config + $defaults;
+		$this->_setDriver($config['driver']);
+
+		parent::__construct($config);
 	}
-	
-	protected function _set_driver($driver = null) {
+
+	protected function _setDriver($driver = null) {
 	    if(!empty($driver)) {
 	        $this->driver = $driver;
 	    }
@@ -147,9 +153,9 @@ class SqlSrv extends \lithium\data\source\Database {
 			    $this->_classes['result'] = 'li3_sqlsrv\extensions\adapter\data\source\database\mssql\Result';
 		    }
 		    else {
-		        //ODBC? ODBTP?
+		        // @todo Add support for ODBTP		        
 		    }
-		}	
+		}
 	}
 
 	/**
@@ -187,33 +193,33 @@ class SqlSrv extends \lithium\data\source\Database {
 		if (!$config['database']) {
 			return false;
 		}
-		
+
 		switch($this->driver) {
 	        case 'mssql': $this->mssql_connect($config); break;
-	        case 'sqlsrv': $this->sqlsrv_connect($config); break;	
-	    }	
-		
+	        case 'sqlsrv': $this->sqlsrv_connect($config); break;
+	    }
+
 		if(!$this->connection) return false;
-		
+
 		return $this->_isConnected = true;
 	}
-	
+
 	protected function mssql_connect($config) {
-	    
+
 	    $pc = strpos(PHP_OS,'Win') !== false ? ',' : ':';
-	    
+
 	    if(empty($config['persistent'])) { //Not persistent
-	        $this->connection = mssql_connect($config['host'] . $pc . $config['port'], $config['login'], $config['password'], true);												
-	    } 
-	    else { //Persistent
-	        $this->connection = mssql_pconnect($config['host'] . $pc . $config['port'], $config['login'], $config['password']);			
+	        $this->connection = mssql_connect($config['host'] . $pc . $config['port'], $config['login'], $config['password'], true);
 	    }
-	    
+	    else { //Persistent
+	        $this->connection = mssql_pconnect($config['host'] . $pc . $config['port'], $config['login'], $config['password']);
+	    }
+
 	    if($this->connection) {
 	        mssql_select_db($config['database'], $this->connection);
         }
 	}
-	
+
 	protected function sqlsrv_connect($config) {
 	    $mapping = array(
 			'database'   => 'Database',
@@ -229,7 +235,7 @@ class SqlSrv extends \lithium\data\source\Database {
 				$options[$to] = $config[$from];
 			}
 		}
-	    
+
 	    $this->connection = sqlsrv_connect($config['host'], $options);
 	}
 
@@ -242,7 +248,7 @@ class SqlSrv extends \lithium\data\source\Database {
 		if ($this->_isConnected) {
 		    switch($this->driver) {
 		        case 'sqlsrv': $this->_isConnected = !sqlsrv_close($this->connection); break;
-		        case 'mssql': $this->_isConnected = !mssql_close($this->connection); break;	
+		        case 'mssql': $this->_isConnected = !mssql_close($this->connection); break;
 		    }
 
 			return !$this->_isConnected;
@@ -355,10 +361,10 @@ class SqlSrv extends \lithium\data\source\Database {
 		}
 		$fields = array();
 		$count = 0;
-		
+
 		if($this->driver == 'sqlsrv') {
 		    $count = sqlsrv_num_fields($result->resource());
-		    
+
 		    foreach (sqlsrv_field_metadata($result->resource()) as $name => $value) {
 		        // TODO: Ensure this works correctly
     			if ($name === 'Name') {
@@ -368,15 +374,15 @@ class SqlSrv extends \lithium\data\source\Database {
 		}
 		elseif($this->driver == 'mssql') {
 		    $count = mssql_num_fields($result->resource());
-		    
+
 		    for($i == 0; $i < $count; ++$i) {
 		        $field = mssql_fetch_field($result->resource(),$i);
-		        
+
 		        $fields[] = $field->name;
 		    }
-		    
+
 		}
-		
+
 		return $fields;
 	}
 
@@ -384,7 +390,7 @@ class SqlSrv extends \lithium\data\source\Database {
 		if ($context->type() != "update" || !($entity =& $context->entity())) {
 			return $data;
 		}
-		
+
 		$data = array();
 
 		foreach ($entity->export($this) as $name => $value) {
@@ -416,7 +422,7 @@ class SqlSrv extends \lithium\data\source\Database {
 	            return array(001,$error); //Driver does not provide error codes
 	        }
 	    }
-	    
+
 		return null;
 	}
 
@@ -445,6 +451,10 @@ class SqlSrv extends \lithium\data\source\Database {
 		return parent::alias($alias, $context);
 	}
 
+    public function driver() {
+        return $this->driver;
+    }
+
 	/**
 	 * @todo Eventually, this will need to rewrite aliases for DELETE and UPDATE queries, same with
 	 *       order().
@@ -470,8 +480,8 @@ class SqlSrv extends \lithium\data\source\Database {
 			$sql = $params['sql'];
 			$options = $params['options'];
 			$resource = null;
-			
-			switch($self->driver) {
+
+			switch($self->driver()) {
 			    case 'sqlsrv': $resource = sqlsrv_query($self->connection, $sql); break;
 			    case 'mssql': $resource = mssql_query($sql,$self->connection); break;
 		    }
